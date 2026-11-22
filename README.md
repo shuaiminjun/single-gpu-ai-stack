@@ -2,6 +2,11 @@
 
 # single-gpu-ai-stack
 
+> **Status** — early-stage, actively developed. Feedback, corrections and "you got this wrong" are all welcome: **shuaiminjun541@gmail.com**
+>
+> Built with heavy AI assistance. The design decisions (and the mistakes that led to them) are written down in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/CASE_STUDY.md`](docs/CASE_STUDY.md) — read those before assuming the code is right.
+
+
 **一张 20 GB 的显卡，对外一套 OpenAI 兼容接口，同时提供 chat / 图像 / 语音三种能力。**
 
 核心只有一件事：**显存预算调度**——谁在用卡、能不能装下、装不下淘汰谁、装不下又没法淘汰时怎么拒绝。协议层（SSE、chunked WAV、b64 PNG）用标准库手写，零运行时依赖。
