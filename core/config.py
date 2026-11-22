@@ -30,8 +30,8 @@ class ModelSpec:
         if missing:
             raise ValueError(f"model spec missing fields: {sorted(missing)}")
         kind = raw["kind"]
-        if kind not in ("chat", "audio"):
-            raise ValueError(f"model {raw['id']}: kind must be chat|audio, got {kind!r}")
+        if kind not in ("chat", "audio", "image"):
+            raise ValueError(f"model {raw['id']}: kind must be chat|audio|image, got {kind!r}")
         return cls(
             id=str(raw["id"]),
             kind=kind,

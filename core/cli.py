@@ -1,4 +1,4 @@
-"""CLI: ``python -m orchestra serve --config examples/config.json``."""
+"""CLI: ``python -m core serve --config examples/config.json``."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from .server import serve
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="orchestra", description="single-GPU model orchestrator")
+    ap = argparse.ArgumentParser(prog="ai-stack", description="single-GPU model orchestrator")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("serve", help="start the HTTP server")

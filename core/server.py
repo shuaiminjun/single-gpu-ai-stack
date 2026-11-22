@@ -14,6 +14,7 @@ GET  /v1/models                   model list (OpenAI shape)
 GET  /metrics                     scheduler counters (Prometheus text)
 POST /v1/chat/completions         JSON or SSE (``stream: true``)
 POST /v1/audio/speech             chunked 16-bit PCM WAV
+POST /v1/images/generations       OpenAI-shaped b64 PNG
 """
 
 from __future__ import annotations
@@ -55,7 +56,7 @@ class App:
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    server_version = "gpu-orchestra/0.1"
+    server_version = "single-gpu-ai-stack/0.1"
 
     # ------------------------------------------------------------- plumbing
     @property
@@ -141,6 +142,8 @@ class Handler(BaseHTTPRequestHandler):
             self._chat(body)
         elif self.path == "/v1/audio/speech":
             self._audio(body)
+        elif self.path == "/v1/images/generations":
+            self._image(body)
         else:
             self._error(404, f"no route for POST {self.path}", "not_found_error")
 
@@ -245,6 +248,46 @@ class Handler(BaseHTTPRequestHandler):
             self._chunk(b"")
         finally:
             lease.release()
+
+    def _image(self, body: dict[str, Any]) -> None:
+        """OpenAI 形状：{"created": ts, "data": [{"b64_json": ...}]}.
+
+        ``response_format`` 支持 ``b64_json``（默认，便于测试）与 ``url``
+        （返回 ``data:image/png;base64,...``，浏览器直接能显示）。
+        """
+        model = body.get("model")
+        prompt = body.get("prompt")
+        if not model:
+            return self._error(400, "missing 'model'")
+        if not prompt:
+            return self._error(400, "missing 'prompt'")
+        size = str(body.get("size") or "64x64")
+        fmt = str(body.get("response_format") or "b64_json")
+        try:
+            lease = self.app.scheduler.acquire(model, timeout_s=body.get("queue_timeout_s"))
+        except UnknownModel:
+            return self._error(404, f"unknown model {model!r}", "not_found_error")
+        except QueueFull as exc:
+            return self._json(429, {"error": {"message": str(exc), "type": "queue_full"}})
+        except SchedulerError as exc:
+            return self._error(400, str(exc))
+        except TimeoutError as exc:
+            return self._json(504, {"error": {"message": str(exc), "type": "timeout"}})
+
+        wait_ms = lease.wait_s * 1000.0
+        try:
+            t0 = _now_ms()
+            png = self.app.backend.image(lease.spec, prompt, size=size)
+            gen_ms = _now_ms() - t0
+        finally:
+            lease.release()
+        import base64
+
+        b64 = base64.b64encode(png).decode()
+        item = {"b64_json": b64} if fmt == "b64_json" else {"url": "data:image/png;base64," + b64}
+        self._json(200, {"created": int(time.time()), "data": [item], "size": size,
+                         "png_bytes": len(png)},
+                   headers={"X-Queue-Wait-Ms": f"{wait_ms:.1f}", "X-Gen-Ms": f"{gen_ms:.1f}"})
 
     def _chunk(self, data: bytes) -> None:
         self.wfile.write(f"{len(data):X}\r\n".encode())

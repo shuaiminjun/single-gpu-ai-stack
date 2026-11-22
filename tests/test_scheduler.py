@@ -7,8 +7,8 @@ import time
 
 import pytest
 
-from orchestra.config import Config, ModelSpec
-from orchestra.scheduler import DoesNotFit, QueueFull, Scheduler, UnknownModel
+from core.config import Config, ModelSpec
+from core.scheduler import DoesNotFit, QueueFull, Scheduler, UnknownModel
 
 
 def make_config(total_gb: float = 20.0, **kw) -> Config:

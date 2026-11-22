@@ -8,35 +8,70 @@
       "kind": "chat",
       "vram_gb": 8.0,
       "backend": "fake",
-      "tags": ["llm", "q4"]
+      "tags": [
+        "llm",
+        "q4"
+      ]
     },
     {
       "id": "chat-27b",
       "kind": "chat",
       "vram_gb": 15.5,
       "backend": "fake",
-      "tags": ["llm", "q4"]
+      "tags": [
+        "llm",
+        "q4"
+      ]
     },
     {
       "id": "tts-voice-a",
       "kind": "audio",
       "vram_gb": 3.5,
       "backend": "fake",
-      "tags": ["tts", "32khz"]
+      "tags": [
+        "tts",
+        "32khz"
+      ]
     },
     {
       "id": "tts-voice-b",
       "kind": "audio",
       "vram_gb": 3.5,
       "backend": "fake",
-      "tags": ["tts", "32khz"]
+      "tags": [
+        "tts",
+        "32khz"
+      ]
     },
     {
       "id": "diffusion-xl",
       "kind": "audio",
       "vram_gb": 12.0,
       "backend": "fake",
-      "tags": ["image", "fp8"]
+      "tags": [
+        "image",
+        "fp8"
+      ]
+    },
+    {
+      "id": "image-sdxl",
+      "kind": "image",
+      "vram_gb": 11.0,
+      "backend": "fake",
+      "tags": [
+        "image",
+        "1024"
+      ]
+    },
+    {
+      "id": "image-krea2",
+      "kind": "image",
+      "vram_gb": 12.5,
+      "backend": "fake",
+      "tags": [
+        "image",
+        "fp8"
+      ]
     }
   ]
 }

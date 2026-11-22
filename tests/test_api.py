@@ -11,9 +11,9 @@ import wave
 
 import pytest
 
-from orchestra.backends import wav_header
-from orchestra.config import Config, ModelSpec
-from orchestra.server import serve
+from core.backends import wav_header
+from core.config import Config, ModelSpec
+from core.server import serve
 
 
 def free_port() -> int:
@@ -31,6 +31,7 @@ def server():
         models=[
             ModelSpec(id="chat-4b", kind="chat", vram_gb=6.0),
             ModelSpec(id="tts-a", kind="audio", vram_gb=3.0),
+          ModelSpec(id="img", kind="image", vram_gb=11.0),
         ],
     )
     httpd = serve(cfg, host="127.0.0.1", port=free_port(), backend="fake",
@@ -61,7 +62,7 @@ def http_get(url: str, timeout: float = 10.0):
 def test_models_and_health(server):
     models = json.loads(http_get(server + "/v1/models").read())
     ids = {m["id"] for m in models["data"]}
-    assert ids == {"chat-4b", "tts-a"}
+    assert ids == {"chat-4b", "tts-a", "img"}
     health = json.loads(http_get(server + "/healthz").read())
     assert health["ok"] is True
     assert health["vram_gb"] == 20.0
@@ -147,3 +148,42 @@ def test_sequential_models_swap_within_budget(server):
     health = json.loads(http_get(server + "/healthz").read())
     assert health["resident_models"] == 2
     assert health["resident_gb"] == pytest.approx(9.0)
+
+
+def test_image_generation_returns_valid_png(server):
+    import base64
+    import struct
+
+    resp = http_post(server + "/v1/images/generations",
+                     {"model": "img", "prompt": "a red fox", "size": "32x24"})
+    body = json.loads(resp.read())
+    assert "X-Gen-Ms" in resp.headers
+    png = base64.b64decode(body["data"][0]["b64_json"])
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"
+    # IHDR: width/height live at bytes 16..24
+    w, h = struct.unpack(">II", png[16:24])
+    assert (w, h) == (32, 24)
+    assert body["png_bytes"] == len(png)
+
+
+def test_image_url_format(server):
+    resp = http_post(server + "/v1/images/generations",
+                     {"model": "img", "prompt": "cat", "response_format": "url"})
+    url = json.loads(resp.read())["data"][0]["url"]
+    assert url.startswith("data:image/png;base64,")
+
+
+def test_image_unknown_model(server):
+    import urllib.error
+
+    with pytest.raises(urllib.error.HTTPError) as ei:
+        http_post(server + "/v1/images/generations", {"model": "nope", "prompt": "x"})
+    assert ei.value.code == 404
+
+
+def test_image_needs_prompt(server):
+    import urllib.error
+
+    with pytest.raises(urllib.error.HTTPError) as ei:
+        http_post(server + "/v1/images/generations", {"model": "img"})
+    assert ei.value.code == 400

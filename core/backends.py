@@ -11,6 +11,7 @@ also how the tests run.
 from __future__ import annotations
 
 import io
+import json
 import math
 import struct
 import time
@@ -18,11 +19,13 @@ import wave
 from typing import Iterator, Protocol
 
 from .config import ModelSpec
+from .pngio import demo_png
 
 
 class Backend(Protocol):
     def chat_stream(self, spec: ModelSpec, prompt: str, **kw) -> Iterator[str]: ...
     def audio_stream(self, spec: ModelSpec, text: str, **kw) -> Iterator[bytes]: ...
+    def image(self, spec: ModelSpec, prompt: str, **kw) -> bytes: ...
 
 
 def _sse(payload: str) -> str:
@@ -46,6 +49,15 @@ class FakeBackend:
         for w in words.split():
             time.sleep(self.word_delay_s)
             yield w + " "
+
+    def image(self, spec: ModelSpec, prompt: str, size: str = "64x64", **kw) -> bytes:
+        """A deterministic PNG whose colours depend on the prompt hash."""
+        try:
+            w, h = (int(v) for v in size.lower().split("x"))
+        except Exception:
+            w, h = 64, 64
+        w, h = max(8, min(1024, w)), max(8, min(1024, h))
+        return demo_png(w, h, seed=abs(hash(prompt)) % 251)
 
     def audio_stream(self, spec: ModelSpec, text: str, sample_rate: int = 32000, **kw) -> Iterator[bytes]:
         # 按 ~8 字/秒 估时长，上限 3 s：让 demo 里的音频长度看起来像真的
@@ -86,6 +98,81 @@ def wav_header(sample_rate: int, channels: int = 1, bits: int = 16, data_bytes: 
     idx = head.find(b"data")
     head[idx + 4: idx + 8] = struct.pack("<I", 0xFFFFFFFF if fake else data_bytes)
     return bytes(head[:44])
+
+
+class ComfyUIBackend:
+    """Talk to a running ComfyUI: submit a workflow, poll history, fetch the image.
+
+    ``spec.target`` is the workflow JSON path. ``{prompt}`` inside the workflow's
+    positive text node is substituted. Kept dependency-free (urllib).
+    """
+
+    def __init__(self, base_url: str = "http://127.0.0.1:8188", timeout_s: float = 300.0,
+                 poll_s: float = 0.5):
+        self.base_url = base_url.rstrip("/")
+        self.timeout_s = timeout_s
+        self.poll_s = poll_s
+
+    # -- transport -----------------------------------------------------
+    def _post(self, path: str, payload: dict) -> dict:
+        import urllib.request
+
+        req = urllib.request.Request(self.base_url + path, data=json.dumps(payload).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read().decode())
+
+    def _get(self, path: str) -> dict:
+        import urllib.request
+
+        with urllib.request.urlopen(self.base_url + path, timeout=30) as r:
+            return json.loads(r.read().decode())
+
+    def _fetch(self, path: str) -> bytes:
+        import urllib.request
+
+        with urllib.request.urlopen(self.base_url + path, timeout=60) as r:
+            return r.read()
+
+    # -- workflow ------------------------------------------------------
+    def _load_workflow(self, spec: ModelSpec, prompt: str) -> dict:
+        from pathlib import Path
+
+        wf = json.loads(Path(spec.target).read_text(encoding="utf-8"))
+        for node in wf.values():
+            if not isinstance(node, dict):
+                continue
+            inputs = node.get("inputs") or {}
+            for key, val in list(inputs.items()):
+                if isinstance(val, str) and "{prompt}" in val:
+                    inputs[key] = val.replace("{prompt}", prompt)
+        return wf
+
+    def image(self, spec: ModelSpec, prompt: str, **kw) -> bytes:
+        wf = self._load_workflow(spec, prompt)
+        submitted = self._post("/prompt", {"prompt": wf})
+        pid = submitted.get("prompt_id")
+        if not pid:
+            raise RuntimeError(f"ComfyUI rejected the workflow: {submitted}")
+        deadline = time.monotonic() + self.timeout_s
+        while time.monotonic() < deadline:
+            hist = self._get(f"/history/{pid}")
+            entry = hist.get(pid) or {}
+            outputs = entry.get("outputs") or {}
+            for node_out in outputs.values():
+                for img in (node_out.get("images") or []):
+                    q = f"/view?filename={img['filename']}&subfolder={img.get('subfolder','')}&type={img.get('type','output')}"
+                    return self._fetch(q)
+            if entry.get("status", {}).get("status_str") == "error":
+                raise RuntimeError("ComfyUI execution error")
+            time.sleep(self.poll_s)
+        raise TimeoutError(f"ComfyUI did not finish within {self.timeout_s}s")
+
+    def chat_stream(self, spec: ModelSpec, prompt: str, **kw) -> Iterator[str]:
+        raise NotImplementedError("use a chat backend for this model")
+
+    def audio_stream(self, spec: ModelSpec, text: str, **kw) -> Iterator[bytes]:
+        raise NotImplementedError("use an audio backend for this model")
 
 
 class SubprocessBackend:
@@ -130,4 +217,6 @@ def make_backend(name: str, **kw) -> Backend:
         return FakeBackend(**kw)
     if name in ("subprocess", "cli"):
         return SubprocessBackend(**kw)
+    if name in ("comfyui", "comfy"):
+        return ComfyUIBackend(**kw)
     raise ValueError(f"unknown backend {name!r}")

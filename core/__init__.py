@@ -1,4 +1,4 @@
-"""gpu-orchestra: single-GPU multi-model serving with an OpenAI-compatible API."""
+"""single-gpu-ai-stack: one GPU, one OpenAI-compatible gateway (chat / image / audio)."""
 
 from .config import Config, ModelSpec
 from .scheduler import DoesNotFit, Lease, QueueFull, Scheduler, UnknownModel
