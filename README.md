@@ -1,3 +1,5 @@
+[![ci](https://github.com/shuaiminjun/single-gpu-ai-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/shuaiminjun/single-gpu-ai-stack/actions/workflows/ci.yml) [![python](https://img.shields.io/badge/python-3.10%2B-blue)]() [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 # single-gpu-ai-stack
 
 **一张 20 GB 的显卡，对外一套 OpenAI 兼容接口，同时提供 chat / 图像 / 语音三种能力。**

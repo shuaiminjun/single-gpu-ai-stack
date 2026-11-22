@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: python -m pip install --upgrade pip pytest
+      - name: Run tests
+        run: python -m pytest tests -q
+      - name: Smoke test the three endpoints
+        run: |
+          python -m core serve --config examples/config.json --port 9881 &
+          sleep 2
+          curl -sf localhost:9881/healthz > /dev/null
+          curl -sf -X POST localhost:9881/v1/chat/completions \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"chat-7b","messages":[{"role":"user","content":"hi"}]}' > /dev/null
+          curl -sf -X POST localhost:9881/v1/images/generations \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"image-sdxl","prompt":"a fox","size":"16x16"}' > /dev/null
+          curl -sf -X POST localhost:9881/v1/audio/speech \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"tts-voice-a","input":"hi"}' -o /tmp/out.wav
+          python -c "import wave; w=wave.open('/tmp/out.wav'); assert w.getnframes() > 0"
