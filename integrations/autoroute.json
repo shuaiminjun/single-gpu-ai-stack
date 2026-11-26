@@ -1,0 +1,80 @@
+{
+  "_说明": "一句话出图的路由表：按顺序匹配关键词，命中即用目标模型，都没命中用 default。",
+  "_字段": {
+    "keywords": "命中关键词（中英文都行）",
+    "model": "目标模型 id（换成你自己的）"
+  },
+  "default": {
+    "model": "your-default-model",
+    "note": "没提任何具体角色/风格时用这个"
+  },
+  "rules": [
+    {
+      "keywords": [
+        "写实",
+        "照片",
+        "摄影",
+        "realistic",
+        "photograph"
+      ],
+      "model": "your-photo-model",
+      "note": "真人/写实底模"
+    },
+    {
+      "keywords": [
+        "水墨",
+        "国风",
+        "ink"
+      ],
+      "model": "your-ink-model",
+      "note": "水墨风格"
+    },
+    {
+      "keywords": [
+        "风景",
+        "山湖",
+        "日出",
+        "landscape"
+      ],
+      "model": "your-landscape-model",
+      "note": "风景"
+    },
+    {
+      "keywords": [
+        "微距",
+        "花",
+        "macro",
+        "flower"
+      ],
+      "model": "your-macro-model",
+      "note": "微距"
+    },
+    {
+      "keywords": [
+        "q版",
+        "chibi",
+        "二头身"
+      ],
+      "model": "your-chibi-model",
+      "note": "Q 版"
+    },
+    {
+      "keywords": [
+        "猫娘",
+        "猫耳",
+        "neko",
+        "cat girl"
+      ],
+      "model": "your-cat-lora-model",
+      "note": "角色 LoRA 条目"
+    },
+    {
+      "keywords": [
+        "女仆",
+        "maid"
+      ],
+      "model": "your-maid-lora-model",
+      "note": "角色 LoRA 条目"
+    }
+  ]
+}

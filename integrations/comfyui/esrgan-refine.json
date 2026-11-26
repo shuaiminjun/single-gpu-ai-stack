@@ -1,0 +1,151 @@
+{
+  "_meta": {
+    "label": "HsM Photo XL（RealVis 真人）",
+    "kind": "image",
+    "note": "ESRGAN 精修样板：832×1216 出图 → RealESRGAN ×4 → 缩放回 1248×1824 → denoise 0.35 回炉。\n超分模型放 ComfyUI/models/upscale_models/（RealESRGAN_x4plus.pth 需要 spandrel）。\n关键在 _meta.refine：调用方按它动态插 Latent 放大/超分那条链，见 integrations/README.md。",
+    "prompt_lang": "en",
+    "defaults": {
+      "width": 832,
+      "height": 1216,
+      "steps": 30,
+      "cfg": 5.0,
+      "sampler": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "negative": "worst quality, low quality, lowres, cgi, 3d render, illustration, anime, cartoon, painting, sketch, deformed, bad anatomy, bad hands, extra digits, watermark, text, jpeg artifacts",
+      "timeout": 900,
+      "lora": "none",
+      "lora_strength": 0.0
+    },
+    "presets": [
+      {
+        "id": "portrait",
+        "label": "竖图 1024×1536",
+        "note": "原生比例，最像参考图",
+        "width": 832,
+        "height": 1216,
+        "steps": 32
+      },
+      {
+        "id": "square",
+        "label": "方图 1024",
+        "note": "头像/贴纸",
+        "width": 1024,
+        "height": 1024,
+        "steps": 30
+      },
+      {
+        "id": "wide",
+        "label": "横图 1536×1024",
+        "note": "封面/壁纸",
+        "width": 1216,
+        "height": 832,
+        "steps": 32
+      }
+    ],
+    "refine": {
+      "upscaler": "RealESRGAN_x4plus.pth",
+      "scale": 1.5,
+      "denoise": 0.35,
+      "steps": 20,
+      "pos": "3",
+      "neg": "4",
+      "_note": "model_node / vae_node 不要写死：从图里第一个 KSampler 的 model 输入、第一个 VAEDecode 的 vae 输入读（lora 节点可能被摘掉，节点 id 会变）"
+    },
+    "_source": "example exported from a working setup; replace ckpt_name with your own"
+  },
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "your-checkpoint.safetensors"
+    }
+  },
+  "2": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "lora_name": "{{lora}}",
+      "strength_model": "{{lora_strength}}"
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "{{prompt}}",
+      "clip": [
+        "1",
+        1
+      ]
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "{{negative}}",
+      "clip": [
+        "1",
+        1
+      ]
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": "{{width}}",
+      "height": "{{height}}",
+      "batch_size": 1
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ],
+      "seed": "{{seed}}",
+      "steps": "{{steps}}",
+      "cfg": "{{cfg}}",
+      "sampler_name": "{{sampler}}",
+      "scheduler": "{{scheduler}}",
+      "denoise": 1.0
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "6",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "7",
+        0
+      ],
+      "filename_prefix": "{{prefix}}"
+    }
+  }
+}

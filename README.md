@@ -32,6 +32,21 @@ curl -s localhost:9881/v1/audio/speech -H 'Content-Type: application/json' \
 
 ---
 
+## 仓库里有什么
+
+| 目录/文件 | 内容 |
+|---|---|
+| `core/` | 调度器 + 标准库 HTTP 服务（chat 流式 / 出图 / 语音），零运行时依赖 |
+| `integrations/comfyui/` | 能直接用的 ComfyUI 工作流样板：ESRGAN 精修、latent 放大、Krea 2 |
+| `integrations/autoroute.json` | 一句话出图的关键词路由表（"写实/水墨/猫娘"→ 各自模型） |
+| `ops/comfy_watchdog.py` | ComfyUI 崩了自动拉起（ROCm 上是硬 abort，必须有人兜） |
+| `docs/VRAM_NOTES.md` | **20 GB 卡上的显存事故清单**：症状 → 判据 → 对策 |
+| `docs/ARCHITECTURE.md` / `docs/CASE_STUDY.md` | 调度取舍 / 真实排障案例 |
+
+先读 `docs/VRAM_NOTES.md`，那里记的都是踩过的坑，不是理论。
+
+---
+
 ## 它解决什么问题
 
 在一张卡上堆 LLM + 扩散 + TTS，"全部加载"必然失败，而且失败得很脏：
@@ -131,10 +146,13 @@ core/
   pngio.py       # 无依赖 PNG 编码（仅供 fake backend 与测试）
   server.py      # 标准库 HTTP：SSE / chunked WAV / b64 PNG / 指标
   cli.py         # serve / check
-integrations/    # 接真模型的最小示例（comfyui 工作流、tts 命令行）
+integrations/    # 接真模型的最小示例（comfyui 工作流、autoroute 路由表）
+ops/
+  comfy_watchdog.py   # ComfyUI 崩溃自愈
 docs/
   ARCHITECTURE.md   # 调度算法与取舍
   CASE_STUDY.md     # 真实排障：语音"闷/杂音"如何被量化
+  VRAM_NOTES.md     # 20 GB 卡上的显存事故与对策
 tests/
 ```
 
@@ -142,7 +160,7 @@ tests/
 
 ## 路线图
 
-- [ ] `integrations/` 补一个能直接跑的 ComfyUI 工作流示例（含 `--cache-none` 说明）
+- [x] `integrations/` 补能直接跑的 ComfyUI 工作流样板（ESRGAN 精修 / latent 放大）
 - [ ] 请求取消：客户端断开 → 立刻释放 GPU
 - [ ] 按 `kind` 分池（chat / image / audio 各自排队，避免一个长出图卡住对话）
 - [ ] GitHub Actions：pytest + 三个接口的 smoke

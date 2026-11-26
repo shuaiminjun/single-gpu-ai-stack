@@ -1,0 +1,181 @@
+{
+  "_meta": {
+    "label": "HsM Anime XL · 高清",
+    "kind": "image",
+    "note": "latent 放大样板（更快、细节不如 ESRGAN）：1024² → LatentUpscaleBy 1.5 → 二次采样 0.5。\n适合先要速度、之后再用 esrgan-refine 补细节的场景。",
+    "prompt_lang": "en",
+    "defaults": {
+      "width": 1024,
+      "height": 1024,
+      "steps": 28,
+      "cfg": 5.0,
+      "sampler": "euler_ancestral",
+      "scheduler": "normal",
+      "negative": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, worse quality, low quality, jpeg artifacts, signature, watermark, username, blurry",
+      "lora": "none",
+      "lora_strength": 0.0,
+      "timeout": 900,
+      "hires_denoise": 0.4
+    },
+    "presets": [
+      {
+        "id": "std",
+        "label": "标准 1024",
+        "note": "动画底座原生分辨率",
+        "width": 1024,
+        "height": 1024,
+        "steps": 28
+      },
+      {
+        "id": "fast",
+        "label": "快速 832",
+        "note": "草稿用，约 20 秒",
+        "width": 832,
+        "height": 832,
+        "steps": 22
+      },
+      {
+        "id": "portrait",
+        "label": "竖图 832×1216",
+        "note": "全身/立绘",
+        "width": 832,
+        "height": 1216,
+        "steps": 28
+      }
+    ],
+    "_source": "example exported from a working setup; replace ckpt_name with your own"
+  },
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "your-checkpoint.safetensors"
+    }
+  },
+  "2": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "lora_name": "{{lora}}",
+      "strength_model": "{{lora_strength}}"
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "{{prompt}}",
+      "clip": [
+        "1",
+        1
+      ]
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "{{negative}}",
+      "clip": [
+        "1",
+        1
+      ]
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": "{{width}}",
+      "height": "{{height}}",
+      "batch_size": 1
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ],
+      "seed": "{{seed}}",
+      "steps": "{{steps}}",
+      "cfg": "{{cfg}}",
+      "sampler_name": "{{sampler}}",
+      "scheduler": "{{scheduler}}",
+      "denoise": 1.0
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "11",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "7",
+        0
+      ],
+      "filename_prefix": "{{prefix}}"
+    }
+  },
+  "10": {
+    "class_type": "LatentUpscaleBy",
+    "inputs": {
+      "samples": [
+        "6",
+        0
+      ],
+      "upscale_method": "nearest-exact",
+      "scale_by": 1.5
+    }
+  },
+  "11": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "10",
+        0
+      ],
+      "seed": "{{seed}}",
+      "steps": 18,
+      "cfg": "{{cfg}}",
+      "sampler_name": "{{sampler}}",
+      "scheduler": "{{scheduler}}",
+      "denoise": "{{hires_denoise}}"
+    }
+  }
+}
