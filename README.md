@@ -4,7 +4,7 @@
 
 > **Status** — early-stage, actively developed. Feedback, corrections and "you got this wrong" are all welcome: **shuaiminjun541@gmail.com**
 >
-> Built with heavy AI assistance. The design decisions (and the mistakes that led to them) are written down in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/CASE_STUDY.md`](docs/CASE_STUDY.md) — read those before assuming the code is right.
+> Built with heavy AI assistance. What I actually did is written down: the trade-offs in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the debugging story in [`docs/CASE_STUDY.md`](docs/CASE_STUDY.md) — including the parts that went wrong first.
 
 
 **一张 20 GB 的显卡，对外一套 OpenAI 兼容接口，同时提供 chat / 图像 / 语音三种能力。**
